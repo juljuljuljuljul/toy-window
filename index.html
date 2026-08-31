@@ -48,6 +48,17 @@
     display:grid;place-items:center;font-size:19px;box-shadow:0 6px 16px -6px var(--flame);transform:rotate(-6deg)}
   .bar h1{margin:0;font-family:"Baloo 2","Nunito",sans-serif;font-weight:800;font-size:clamp(19px,4.2vw,25px);line-height:1}
   .bar span{color:var(--ink-soft);font-weight:700;font-size:13px}
+  #fs{margin-left:auto;flex:none;display:none;align-items:center;gap:6px;border:2px solid var(--line);
+    background:var(--card);color:var(--ink);font-family:inherit;font-weight:800;font-size:13px;
+    padding:7px 12px;border-radius:999px;cursor:pointer;transition:transform .12s ease,border-color .12s ease}
+  #fs:hover{transform:translateY(-1px);border-color:var(--flame)}
+  #fs:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+  #fs .fi{font-size:15px;line-height:1}
+  #fs .lbl-off{display:inline}
+  #fs .lbl-on{display:none}
+  :fullscreen #fs .lbl-off,:-webkit-full-screen #fs .lbl-off{display:none}
+  :fullscreen #fs .lbl-on,:-webkit-full-screen #fs .lbl-on{display:inline}
+  @media (max-width:560px){#fs .lbl-off,#fs .lbl-on{display:none !important}#fs{padding:8px 10px}}
 
   main{max-width:1240px;margin:0 auto;padding:clamp(14px,3vw,26px)}
   .grid{display:grid;gap:clamp(10px,1.6vw,18px);grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
@@ -129,6 +140,9 @@
     <div class="mark">🔍</div>
     <h1>Toy Window</h1>
     <span>tap a toy, then drag on the big picture to zoom</span>
+    <button id="fs" type="button" aria-label="Full screen">
+      <span class="fi">⛶</span><span class="lbl-off">Full screen</span><span class="lbl-on">Exit full screen</span>
+    </button>
   </div>
 </header>
 
@@ -474,6 +488,21 @@ function amz(id, size){ return AMZ + id.replace(/\+/g,"%2B") + "._AC_SL" + size 
 
 const grid = document.getElementById('grid');
 let ti = 0, ii = 0;
+
+/* ---------- full screen ---------- */
+(function(){
+  const el = document.documentElement;
+  const btn = document.getElementById('fs');
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+  const exit = document.exitFullscreen || document.webkitExitFullscreen;
+  if(!req){ return; }              // e.g. iOS Safari — leave the button hidden
+  btn.style.display = 'flex';
+  btn.addEventListener('click', ()=>{
+    const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+    if(fsEl){ exit.call(document); }
+    else { req.call(el).catch(()=>{}); }
+  });
+})();
 
 TOYS.forEach((t,i)=>{
   const card=document.createElement('div');
