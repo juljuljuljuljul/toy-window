@@ -1,0 +1,589 @@
+<meta charset="utf-8">
+<title>Toy Window</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://m.media-amazon.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap">
+<style>
+  :root{
+    --bg:#fbf6ec; --bg-2:#f2e9d8; --card:#ffffff;
+    --ink:#241f1a; --ink-soft:#6f6656; --line:#e7dcc6;
+    --flame:#ff5330; --flame-ink:#c8320f; --blue:#2f6ff0; --sun:#ffb300;
+    --lens-fill:rgba(255,255,255,.24);
+    --shadow:0 12px 30px -12px rgba(60,42,18,.35);
+    --shadow-lg:0 30px 70px -20px rgba(35,24,8,.55);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#1a1815; --bg-2:#221f1a; --card:#2a2620;
+      --ink:#f4ecdd; --ink-soft:#a99f8c; --line:#3a352c;
+      --flame:#ff6a45; --flame-ink:#ff8a68; --blue:#6f9bff;
+      --lens-fill:rgba(255,255,255,.15);
+      --shadow:0 12px 30px -12px rgba(0,0,0,.6);
+      --shadow-lg:0 30px 70px -20px rgba(0,0,0,.75);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1a1815; --bg-2:#221f1a; --card:#2a2620;
+    --ink:#f4ecdd; --ink-soft:#a99f8c; --line:#3a352c;
+    --flame:#ff6a45; --flame-ink:#ff8a68; --blue:#6f9bff;
+    --lens-fill:rgba(255,255,255,.15);
+    --shadow:0 12px 30px -12px rgba(0,0,0,.6);
+    --shadow-lg:0 30px 70px -20px rgba(0,0,0,.75);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:"Nunito","Segoe UI",system-ui,-apple-system,sans-serif;
+    -webkit-tap-highlight-color:transparent;overflow-x:hidden}
+
+  header{position:sticky;top:0;z-index:40;
+    background:color-mix(in srgb,var(--bg) 88%,transparent);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border-bottom:2px solid var(--line)}
+  .bar{max-width:1240px;margin:0 auto;padding:12px clamp(12px,3vw,26px);display:flex;align-items:center;gap:10px}
+  .bar .mark{width:34px;height:34px;flex:none;border-radius:11px;background:var(--flame);color:#fff;
+    display:grid;place-items:center;font-size:19px;box-shadow:0 6px 16px -6px var(--flame);transform:rotate(-6deg)}
+  .bar h1{margin:0;font-family:"Baloo 2","Nunito",sans-serif;font-weight:800;font-size:clamp(19px,4.2vw,25px);line-height:1}
+  .bar span{color:var(--ink-soft);font-weight:700;font-size:13px}
+
+  main{max-width:1240px;margin:0 auto;padding:clamp(14px,3vw,26px)}
+  .grid{display:grid;gap:clamp(10px,1.6vw,18px);grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  @media (min-width:700px){.grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}}
+  @media (min-width:1000px){.grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}}
+  .card{position:relative;background:var(--card);border:2px solid var(--line);border-radius:20px;padding:12px;
+    aspect-ratio:1/1;cursor:zoom-in;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}
+  .card img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;-webkit-user-drag:none}
+  .card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--flame)}
+  .card:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+  .card .count{position:absolute;right:8px;bottom:8px;background:var(--flame);color:#fff;
+    font-weight:800;font-size:11px;padding:3px 8px;border-radius:999px;display:flex;align-items:center;gap:4px;
+    box-shadow:0 4px 10px -3px rgba(0,0,0,.4)}
+  .imgwrap{position:relative;width:100%;height:100%}
+  .imgwrap.broken{display:none}
+
+  .viewer{position:fixed;inset:0;z-index:100;background:rgba(24,17,10,.88);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;touch-action:none}
+  .viewer.open{display:block}
+  .vwrap{position:absolute;inset:0;display:flex;flex-direction:row;align-items:center;justify-content:center;
+    gap:clamp(10px,2vw,26px);padding:clamp(12px,3vw,44px)}
+  .vthumbs{display:flex;flex-direction:column;gap:10px;flex:none}
+  .vthumb{width:74px;height:74px;border-radius:14px;border:3px solid rgba(255,255,255,.35);background:#fff;
+    padding:5px;cursor:pointer;transition:border-color .12s ease,transform .12s ease}
+  .vthumb img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
+  .vthumb:hover{transform:translateY(-2px)}
+  .vthumb[aria-current="true"]{border-color:var(--flame)}
+
+  .stage{position:relative;background:#fff;border-radius:18px;padding:12px;box-shadow:var(--shadow-lg);
+    max-width:min(78vw,880px);max-height:84vh;cursor:crosshair}
+  .stage img{display:block;max-width:100%;max-height:calc(84vh - 24px);width:auto;height:auto;object-fit:contain;
+    pointer-events:none;-webkit-user-drag:none;border-radius:8px}
+  .stage.loading::after{content:"";position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px;
+    border:4px solid var(--line);border-top-color:var(--flame);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .v-lens{position:absolute;pointer-events:none;border:4px solid var(--flame);background:var(--lens-fill);
+    border-radius:10px;box-shadow:0 0 0 3px rgba(255,255,255,.7),0 4px 16px rgba(0,0,0,.35);display:none}
+  .v-panel{position:fixed;background:#fff center/cover no-repeat;border:4px solid var(--flame);border-radius:18px;
+    box-shadow:var(--shadow-lg);display:none;pointer-events:none;z-index:105}
+  @media (min-width:900px){.v-panel{top:24px;right:24px;width:360px;height:360px}}
+  @media (max-width:899px){.v-panel{top:8px;left:50%;transform:translateX(-50%);width:min(94vw,470px);height:min(40vh,420px)}}
+
+  @media (max-width:899px){
+    .vwrap{flex-direction:column;gap:12px}
+    .stage{max-width:92vw;max-height:64vh}
+    .stage img{max-height:calc(64vh - 24px)}
+    .vthumbs{flex-direction:row;flex-wrap:wrap;justify-content:center;order:2}
+    .vthumb{width:60px;height:60px}
+  }
+
+  .vbtn{position:fixed;z-index:110;width:56px;height:56px;border-radius:50%;border:none;
+    background:rgba(255,255,255,.94);color:#241f1a;font-size:26px;font-weight:900;line-height:1;
+    display:grid;place-items:center;cursor:pointer;box-shadow:var(--shadow);transition:transform .12s ease}
+  .vbtn:hover{transform:scale(1.06)}
+  .vbtn:active{transform:scale(.93)}
+  .vbtn:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+  .v-close{top:calc(14px + env(safe-area-inset-top));left:14px;font-size:22px}
+  .v-prev{left:12px;top:50%;margin-top:-28px}
+  .v-next{right:12px;top:50%;margin-top:-28px}
+  @media (max-width:899px){
+    .v-prev{top:auto;bottom:calc(16px + env(safe-area-inset-bottom));margin-top:0;left:16px}
+    .v-next{top:auto;bottom:calc(16px + env(safe-area-inset-bottom));margin-top:0;right:16px}
+  }
+  .vdots{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom));
+    display:flex;gap:7px;z-index:110;pointer-events:none}
+  @media (max-width:899px){.vdots{bottom:calc(84px + env(safe-area-inset-bottom))}}
+  .vdots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.4)}
+  .vdots i.on{background:var(--flame);width:22px;border-radius:999px}
+  .hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(52px + env(safe-area-inset-bottom));
+    background:rgba(0,0,0,.55);color:#fff;font-weight:800;font-size:13px;padding:8px 15px;border-radius:999px;
+    display:flex;align-items:center;gap:7px;pointer-events:none;transition:opacity .3s ease;z-index:110}
+  @media (max-width:899px){.hint{bottom:calc(120px + env(safe-area-inset-bottom))}}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none !important;animation-duration:.001s !important}}
+</style>
+
+<header>
+  <div class="bar">
+    <div class="mark">🔍</div>
+    <h1>Toy Window</h1>
+    <span>tap a toy, then drag on the big picture to zoom</span>
+  </div>
+</header>
+
+<main><div class="grid" id="grid"></div></main>
+
+<div class="viewer" id="viewer" aria-hidden="true">
+  <button class="vbtn v-close" id="vClose" aria-label="Close">✕</button>
+  <button class="vbtn v-prev" id="vPrev" aria-label="Previous toy">‹</button>
+  <button class="vbtn v-next" id="vNext" aria-label="Next toy">›</button>
+  <div class="vwrap">
+    <div class="vthumbs" id="vThumbs"></div>
+    <div class="stage" id="stage">
+      <img id="stageImg" alt="Toy picture">
+      <div class="v-lens" id="vLens"></div>
+    </div>
+  </div>
+  <div class="v-panel" id="vPanel"></div>
+  <div class="vdots" id="vDots"></div>
+  <div class="hint" id="hint">✋ drag over the picture to zoom</div>
+</div>
+
+<script>
+const TOYS = [
+{ids:["81L1Zx-SWZL","81lH-C0mMNL","71G5AH8AIzL","8196Ou9QqWL","71ieAltXj+L"]},
+{ids:["91sxj7MBhAL","914BrvbI5xL","91ORdI+BZdL","91YYhsBttRL","91dsj47YgnL"]},
+{ids:["81TXnaLVkPL","81hx3TH-9TL","81gl4yNpiVL","81uizfnUu-L"]},
+{ids:["81Orh45mL5L","81URiCacrZL","81a3Vm-74WL","71jQu9MldrL","71NSacQ9mmL"]},
+{ids:["81gpcKOxZML","81NFNfQ-+vL","81l+Y5J3kvL","81knrutbX0L"]},
+{ids:["81GK+Xvb3OL","51Y+-mq3EAL","51YgGVq5qqL","51b7+n66VqL"]},
+{ids:["61D62MsSV0L","81hxGJPZk7L","81OYU8jDLdL","71LfuBbRkWL","81-97t1PrjL"]},
+{ids:["812WxRYZtGL","51XoqwjmyAL","51L8IfcS1IL","51FOcEG7BTL"]},
+{ids:["81As+kqEPpL","81kC23toVNL","81saZs9XatL","81spsrjIwfL","81RyxexahpL"]},
+{ids:["71smWcIxCGL","8123u8kyXWL","71-lC9ODHvL","71XEK5vS1wL","81v2whyCpHL"]},
+{ids:["61E9-gkBA6L","61ffLiAus5L","81SwHiB9aUL","81KdFmxIkQL","71LKsmuUgxL"]},
+{ids:["81l4WrMKNzL","81fSbznv+qL","717QRvqukoL","81QkhI9wTXL","71xaGqriTkL"]},
+{ids:["81YvW13XZIL","81eY-r78kHL","8185WI5K+oL","81DnVXkMebL","817ku6sS9CL"]},
+{ids:["813HlT13Q1L","91KqokyG6DL","91kSjseRL8L","71xM5IKRLBL","71qp2v6w6HL"]},
+{ids:["81hSwkWIzlL","81FHep12PVL","81Gj3RZ0ofL","815KLPEr3-L","71+HNmN6CPL"]},
+{ids:["91njbBNB7OL","71LzBgI81YL","81tTQ-q0p-L","71M6mTkwkzL","71eG9SgyryL"]},
+{ids:["81yAIC1ag5L","51iZS7mj9dL","41nFhzJ6UkL","41UIjwWsasL"]},
+{ids:["81XLlHvWi+L","8118ALDt8kL","81MJyf33YtL","516OhNk5AHL","8107Uz+A2WL"]},
+{ids:["71AR3N3nUIL","61NeCJSu09L","51EHtALxdgL","6143AcGzyJL","51iATQ7uW7L"]},
+{ids:["71+IIG4HeeL","912tlgJIHgL","81yrDHKGvuL","81Jr4PpBxGL","81lZycD8gbL"]},
+{ids:["81+jFCX26eL","81uRe++jnIL","615xxWLgFJL","71gpVQqSV6L","71xexqNn+9L"]},
+{ids:["71gvPqnVHLL","817borAjDlL","81Yjgn9fBHL","71oQFWdHP-L","714OthrO8wL"]},
+{ids:["71Fw2nu3XyL","81+NgQstRRL","813wwbD0EQL","81ZWIsls9vL","91re21X5p-L"]},
+{ids:["81x-H3TSTPL","81kMb0Sos8L","71gWNRcYdcL","81E7FWn34IL","71isP-a+rEL"]},
+{ids:["91E0IVbqRVL","91thtDw2PHL","81GXYvzJzZL","814Lsqt8a9L","91AYOcouPaL"]},
+{ids:["61B3E+D5aHL","51mxwg+gQoL","61vb2qCmJDL","51OfpKF2lYL"]},
+{ids:["61NjJopikmL","51+4bxAlZ1L","31j4XqFqtKL","71Yi0Tj1cfL"]},
+{ids:["81txEMO2nsL","71vfg4UOX5L"]},
+{ids:["81J8IIkCQTL","61np7sNQYnL","71+pK8as75L","91c3NzOZnHL","81AcRbUPkvL"]},
+{ids:["81gt2e8wKwL","61vE704rDxL","61eE5iDtnkL","61v6lr7K9RL","81xXOjpB+ZL"]},
+{ids:["71CVUFgnr3L","81MhfzzXBBL","71uyRuh0yJL","713yFgyTrxL","91LZKfHeMKL"]},
+{ids:["818Mksgn+mL","710UCSKVJQL","71lqPQ-rYmL","71nU85NZFRL","71VVSLs-pHL"]},
+{ids:["61Veh08r+XL","71cfH5SdJ-L","7170qBZKdGL","61x8vKhZNSL","71Wvre3mSzL"]},
+{ids:["81OGxarF8dL","81xMMrWyfZL","81jTULY+RLL","81--WDaH8EL","81K3jhJpFbL"]},
+{ids:["718IiDPNSVL","71tAUGebLCL","71u2g2a132L","81TJrQsuDUL","71U9wwoUyDL"]},
+{ids:["81mE5h65V1L","71HNoYPIBrL","9195tewUF+L","81FG6SX0g4L","91BpJwtz0xL"]},
+{ids:["81vZiPla58L","81up7dMifPL","81YWxu1hVzL","814IylL-FhL","81K+6bC4l6L"]},
+{ids:["71P5esHRwlL","71LCStVBjbL","81lOZw2CdgL","71R++GG9SdL","71sOhBx8i0S"]},
+{ids:["61DbmmzwKtL","51CQ5NRRc7L"]},
+{ids:["81AnqT1sNaL","813tTy5csRL","81pOViOwG2L","81mN3uLR8xL","71cvIn9b4vL"]},
+{ids:["61pNcKMRkXL","71Gn-MwJa5L","719VhqRYPwL","716-E0E0DXL","71p0dSZlWUL"]},
+{ids:["71EZTRnjz2L","614+M74z4kL","71dZB3uXv1L","71YpjucO1mL","71eUrxF5bWL"]},
+{ids:["71jPVjhi3KL","71yM3qTOY+L","71BEenIRnyL","71tV6zK2wdL","714r-eilRRL"]},
+{ids:["71teRPA7PiL","611bSyNj-cL","61hGRjHW2WL","61F3IxTJEkL","618GsKUx61L"]},
+{ids:["814Eh+978kL","41ev8m3wE1L","514sW4VhaeL","51fHCo2DA2L"]},
+{ids:["812ARdu+njL","81Cm7FITZEL","81SGgbUkFJL","81q9+pcZkoL","71djBPehYIL"]},
+{ids:["61+q080bL7L","61TXGNacWeL","71Xl+uqe7UL","61oO24w5TML","71S63xy6PeL"]},
+{ids:["81XQ3yKSFYL","814hfUWZIlL","81b9EMrHQXL","51HX+p0UXtL","81x+uBd2+AL"]},
+{ids:["81pFCj2rUmL","811S4k5Js2L","810zKKbtLJL","81nT-bLywoL","817KA0iBptL"]},
+{ids:["61sBAM89osL","516wZ6vcV5L","51gE1a-MghL","51T2sshcrnL"]},
+{ids:["71Sej6FR+bL","41rsjqn6zJL","41rGvNIuZUL","41EsD4b0nXL","41IeK2NCwxL"]},
+{ids:["91NuYLxe2IL","819K0AjG65L","81lhROC0vsL","81O8B73tCmL","71m3NoW1vLL"]},
+{ids:["814lHJ2GdqL","51prjdJniCL","51q9644AK6L","51QorBNSd-L"]},
+{ids:["91Du5jR6aOL","51x6b0H6+HL","41VoSDB5k+L","41XEN1xZ6yL"]},
+{ids:["91iCdwgEK0L","510j1Ayb1uL","51pCoVSLknL","51ukjku+vzL"]},
+{ids:["61GgHEqGKwL","71lpy6ZAdML","71vyl4YWh2L","714tO5ZRWuL","71vGqqHXbwL"]},
+{ids:["81JAbsnq-KL","81JNly82yTL","81KxPo7kYfL","81ggjsHPihL"]},
+{ids:["71MWuBVCHXL","718A29bnBcL","81aeiqEM9RL","71hCIsy9VLL","710v7J14FML"]},
+{ids:["715WXFr4k1L","71WYe6OTylL","71tQTHGFTyL","71BRK4BA7RL","71nhAka7p6L"]},
+{ids:["7180YCPrRjL","81jlT54hHeL","815A11WBJeL","81wfixELX2L","71Fz8bHczXL"]},
+{ids:["71WAXm5ig2L","61D1bESJyrL","61lWWEya9xL","61mvkpq8zYL","61lgRLxW94L"]},
+{ids:["71Vcz1v73pL","51z6vX28WTL","71pp5UDndbL"]},
+{ids:["818+bw8+Z-L","81JkZOikEeL","81A6VBtAtqL","81xnh7jBwuL","71RF8dhvYoL"]},
+{ids:["81nYTq0dthL","811K-n+WDhL","71rPlPH8lzL","61r5klqoafL","81-FX+SXv7L"]},
+{ids:["71dTWX4CDNL","71tSQXFCEyL","71RH-rbT8UL","71dkHARvvuL","81YUlssmD7L"]},
+{ids:["81gpqX9CuFL","81bVeBM25rL","71s1GVhVZ9L","71L2TlQYbUL","71Ej49r9EWL"]},
+{ids:["617NGvtAlML","713o0x0FmXL","61ahRm01FVL","71R++yTjJZL","61lAxA65jmL"]},
+{ids:["7124d1egfoL","81SQIOSYe7L","71jugHLhZHL","71bD+UmLmkL"]},
+{ids:["71KYIStQzXL","71W5MKBdTwL"]},
+{ids:["716pYWcwi2L","51DqKHe9VJL","51lcsJu01KL","51tZIRA-sWL"]},
+{ids:["91CtfsviPGL","71CSGiIGKKL","21JZPDsitQL","81uF7E3CQdL","811IGVYz5cL"]},
+{ids:["71m79yFKNxL","61dT4YOEvRL","71Rshzic81L","71D-UMlO4KL","81UWRGYck8L"]},
+{ids:["81lfTzHPteL","61WlP1fEN0L","61+EQWKEgYL","71S02JTB8LL","71F3FAvPoQL"]},
+{ids:["71CUeugnNoL","51UL510uMAL","51bAOo0YnBL","5103L5VDIfL","51COnQiDr+L"]},
+{ids:["71nVDhuIRxL","81guaO5suZL","81Zc5qz-UPL","81SeVy8Q3ZL","717mhDDkBJL"]},
+{ids:["61XNfNdYUML","619+LijgxQL","61m6XpMaeuL","71D37JRamtL","61f8cxfSzbL"]},
+{ids:["71rBSS+X9kL","716cvlCuEKL","81MbUHEiTwL","71nBCxapM2L","81oiYcrrSwL"]},
+{ids:["81xZzFKCvRL","81wX2pxRboL","717x8w18XDL","81Mm3DBGfbL","71cMSHo0NiL"]},
+{ids:["811+zwcO4XL","51enih+6NIL","51ixsHdAD-L","51xskpepsbL"]},
+{ids:["71Nzw4N+j-L","81yLOnOWNLL","71KkxOiJ0eL","71E3XpZdy6L","717-SzRcROL"]},
+{ids:["71B4rhO5iLL","41P7WlLfQAL","514AtL3TTAL","51jKP3J4RgL"]},
+{ids:["81VM9sQfj1L","81HgGf7aeQL","81YW7XzAFlL","81UoBcvLWJL"]},
+{ids:["81q94ZM9zjL","51Uewj7cHrL","5162uA+CEML","51culFsETSL"]},
+{ids:["81Cv3JasL1L","818nTYRmq4L","71jK2PWYnqL","718ivn6PXpL","712hMZHnTEL"]},
+{ids:["71-ET9Dl62L","616VUEVgTTL"]},
+{ids:["81gik4pcnRL","41Wr4BJX8aL","51565Cj-XkL","51BS-fp1pRL"]},
+{ids:["71V3NkmkAZL","41+EMNCdf2L","41XFdXvWHYL","41RWECpXcwL"]},
+{ids:["81dvJBBZUnL","81ZUsfGiY5L","71Wv74JFrML","513p+6MCJRL","719XUuh5JGL"]},
+{ids:["81gYEfT0KDL","618U2DpQPyL","61RQdVMVEhL","61++Sp6GV7L","71QZDGYp6wL"]},
+{ids:["7165cEII97L","713ujeJMjmL","61yh9d0NyTL"]},
+{ids:["61Q1l6KK04L","71eGA54HbiL","81M+lNh2AGL","71qfl5uK4DL","71GMo9G-ugL"]},
+{ids:["81ANqRtPJvL","51-I4ZnGRRL","51dfeTo1FtL","51xeUyDUv+L"]},
+{ids:["71iu-rhL87L","81TOh8hNFQL","818xhw0ovsL","81Ix1mANQ7L","71GVeBTchBL"]},
+{ids:["71z6VcNpeXL","81GH3rPqo4L","81CdCLkO9lL","71AO+9PfgNL","81j6D2WHPvL"]},
+{ids:["81S+ygs0LxL","71WrS9u9nOL","71A81veHoYL","71D30Y-7rUL","71ydlRes86L"]},
+{ids:["71uf7UVhbIL","71gDBLRllML","71NXb6pXnzL","71ehbUGChFL","713wTzf5hTL"]},
+{ids:["81UgE+D0ZqL","71dQZF1S1sL","51R0Ajzg5RL","71fX-siwu4L","7121cvMDtTL"]},
+{ids:["71iphDJffwL","71jy6U4UaUL","71rXS+meF8L"]},
+{ids:["61ldx+6xaVL","51Md6Em7WpL","51xcXStzHnL","51C3a1DmFmL","61FN9RwTgdL"]},
+{ids:["81acIlU2pDL","51Kjafhiw1L","51cWWf2DItL","51WAlsPu0mL"]},
+{ids:["81n8LxIwe7L","81KuXa9MR-L","81DWtattMKL","81ZHmT5z64L","81xI4W7gZ9L"]},
+{ids:["716BNeUgJML","81+pjdLsjgL","81Ds6ZELNvL","713KXMxHHeL","81ZqZz-XkKL"]},
+{ids:["81duGuZyRwL","815McreWakL","81WFWMoQ+7L","81YvA3cO6CL","81ODC3FzwTL"]},
+{ids:["818RQpZtSfL","81NNR7sx6sL","81FhIOqRV2L","817qUMtIYTL","71lo2tXn5fL"]},
+{ids:["51-PLeL7G-L","515nQRXYXdL","519cH7pw1UL","61yKiXHT2GL"]},
+{ids:["81M3qewV6hL","81g87x1zntL","818KilgktVL","81CYVI7yeRL","811SdEsSUoL"]},
+{ids:["81np86oHqkL","81DgK3W7UqL","61b4oBTuW5L","51ZO2egz8zL"]},
+{ids:["71+vhKJj-iL","81E1BvU2cwL","71J-e4aHKoL","81PW-i4YRDL","815P4vT2bXL"]},
+{ids:["713td+B2K9L","71HkZaly2eL","61s0x6-6wgL","61kevWFGUOL","61NSwI+7rTL"]},
+{ids:["81WETZ5DgzL","51qJwRnMLdL","513kNqYPbPL","41c4lmS+yBL"]},
+{ids:["81O+O+QWWUL","61dFiv87LaL","81VAbOHqkwL","81fOG4nMo6L","81cFpd0o3aL"]},
+{ids:["71GL81k6nhL","41LMS1H7X3L","41RrE9iX5KL","41TGLyy292L"]},
+{ids:["81cwRmzZKiL","71MWhNR3JhL","71XGdmvF+8L","51y1I-XGaQL","81xG77wHiFL"]},
+{ids:["71ZyqeaOIJL","61aJKxPQvWL","61u4MCa19fL","616aavWvByL","51LfGcR1VsL"]},
+{ids:["61wfk3lOavL","81ETbBLQzdL","61IzbySwHKL","61cfwFGeF1L","51zXgFSZ1bL"]},
+{ids:["615ZpdT0jCL","51GuNvHdueL","81Faa0DnP3L","7152gGAy-KL","71MQHTlXN-L"]},
+{ids:["81Se58nNsxL","51HQz20S7BL","511HKyhZ+eL","51QoGwmNCvL"]},
+{ids:["61w1mESqHZL","61SFON2+oPL","61LkR2MpcTL","31mkKVwjj0L","71pX1GFovTL"]},
+{ids:["81-aqqH-vpL","71W5lxiMxAL","71ShXWTYQSL","71XocRWCBIL"]},
+{ids:["811tR2ki7hL","71qxL1anrNL","71uqZy9DRmL","71p6G8Wyg8L","711KT9DfzsL"]},
+{ids:["81SQXcCavYL","712l0t8o6UL","81gmOHrs1LL","81d2kiJGdqL","81kn-edVrdL"]},
+{ids:["81LyXVKvl-L","71dnyIR9qrL","71AsYek1jUL","71fwhn5xOKL","71tJZDLeRNL"]},
+{ids:["81Tn057C1lL","81otgLi2cSL","8173TBNPhHL","81wxQue8l4L","819QPVJw9cL"]},
+{ids:["81D-tDrYeVL","81VhHhSCh+L","71c-n6AO4oL","81N8ZxT06KL","81tttRZySpL"]},
+{ids:["81xBUOVlaHL","71zbdGKXgaL","71WkmYw4I8L","71ct8Bsn2FL","81nzdD1MaoL"]},
+{ids:["81FfwuPua7L","71aCZq9LntL","71CVOKBTSkL","61YheJmXRZL","815xdaEXzJL"]},
+{ids:["71vjpMNppwL","51jr+Xl-U0L","61yI9PcSKFL","51fRlNNRUbL"]},
+{ids:["71Spv-jV5hL","81PDYmpgOYL","71K0PqvdvZL","71k1NhqqxRL","71wSFoR-e7L"]},
+{ids:["813FKY43FqL","51ST6uQr2XL","51QnSp-Oq1L","51BtN3KCSOL"]},
+{ids:["61FJpkWbvfL","61zTo6h8V1L","6186NCxXzUL","61OgAe3EFSL","61X4RyUFTSL"]},
+{ids:["51GOvYa+wvL","51VrainQeYL","61gou8wRGHL","51dLmWtP3yL","51MmqyozrHL"]},
+{ids:["814bxaS6yKL","81FUMhsjqkL","71aXBlxT49L","71rF4UV4ShL","71L4O8IA1CL"]},
+{ids:["811nClK2tgL","81rGaM4NUSL","81OY9pUZtZL","81jFTHxYN8L","71foPiQlnOL"]},
+{ids:["71IftIa4KGL","716kikMWY0L","71oKDf5OdCL","81NJl79UnTL","71SWFP5UUvL"]},
+{ids:["71IEszGZaKL","71CTKCQJmvL","51bT1kQQnkL","51IqHkJAQ9L","514ijHSDnDL"]},
+{ids:["71-cPGdjflL","71Fyubr2wEL","71Rypakh7RL","71ABcdtD0-L","81pBjJbww4L"]},
+{ids:["81SnD+Y6hoL","71U7aXCE3dL","8119Iom6E+L","81u5t6Ue+IL","81p8KxArJYL"]},
+{ids:["81FeBBBzZ+L","91dQ8GNHdeL","71u34uSCxaL","81gPO0tvvSL","81XFMgt+UHL"]},
+{ids:["817J5QzjNgL","81tBhmFx+vL","819HVof-ToL","81Tt4N4cVYL"]},
+{ids:["81X+78OVj5L","71Ahdulk9zL","710ZjZ68BQL","61-ywtBLMyL"]},
+{ids:["91+n4vSPLJL","81M+8jy6i0L","71wH9pc++UL","71USvkxz3hL"]},
+{ids:["91hmTgQ+6fL","81YsxIgHgwL","71K6Df0Wm6L","81x5NprTrkL","71976Yxw-8L"]},
+{ids:["611ZEwKN5SL","71HzAyFZ3BL","61Gq-opESbL","61h1rgO5usL","71VvrDJlm4L"]},
+{ids:["81lIK9p3hTL","61ngL5VtonL","71Aagm1hHdL","71DtPLNGNAL","71qf9YVkVwL"]},
+{ids:["81vUaMe8ENL","61sIvB+VuvL","71O3rPvHw+L"]},
+{ids:["81PiI3mO6FL","713jrVal5UL","717XwyDW3jL","816S-UBQDML","71KKhnG323L"]},
+{ids:["71KC71glxYL","51ABKGbfsUL","51ATid2eDqL","51xTXCdZ5oL"]},
+{ids:["71HurFhw3FL","61YYxwYuWAL"]},
+{ids:["811F11GO1dL","91ANdH99f4L","81FHbxvFVeL","81UkzsKYN1L","81DINrtUn7L"]},
+{ids:["81FdZ4eC2eL","71cf-3U7e+L","815ZPrLzfAL","81cAFVVRg2L","811S6HDcWXL"]},
+{ids:["71XhTsH0XkL","71FkBZg3i7L","71IGLnKfWGL","61hZM-S-YOL","71UGdUqtinL"]},
+{ids:["81m3a1f4+YL","51T-uX7+kcL","51ZAMBIBQQL","510a7mV-bhL"]},
+{ids:["713ICtgNiUL","71061rm0+hL","71Z0laQlKqL","71Ma4HrMFkL","714qKjrdpWL"]},
+{ids:["712jEK7v8ZL","41xzscWmvZL","41a2R+sFavL","51Be-sq+QRL","61e+MHbWBKL"]},
+{ids:["81aKNRYP3dL","91ZKCHiTszL"]},
+{ids:["717vmR2p1OL","71bZw6n0DKL","81IYlXLNYML","71AF0t5wMoL"]},
+{ids:["81mwqA6kRPL","81Es5dmJg0L","61VESeZGMKL","61bxlS0kGhL"]},
+{ids:["610Ko63mZkL","61-cIs6IwGL","61RDPYP5MkL","81SqRCwIacL"]},
+{ids:["81-TMZyLynL","51tpiOHJMpL","51Ghruyp3OL","615qgxkWclL"]},
+{ids:["81SFAZQdNmL","811Erl8wzAL","71c-eq+sGlL","71eZkB2n-0L","91Adm74wa1L"]},
+{ids:["71Es-GCUFdL","71TrygUrCIL","81Gk1ODCfUL","71V9tL3h82L","8140wFB2YhL"]},
+{ids:["81GueaQtWQL","71Zsj2aus2L","710RWMCYtEL","811yzto+tDL","81LT9EBPhgL"]},
+{ids:["810llMJNtlL","81u4AKnznvL","81mVrjbeeNL","81ZGBvnwTkL","817IhIQeIyL"]},
+{ids:["81Z0gMngq2L","819Xko9NK8L","81uQ9LPLZ7L","71LDixAMzLL","81fbehNXZcL"]},
+{ids:["81a8EYTSZ0L","81TZ5HiS-wL","81t6FKnZuEL","713K9-J4ghL","71k9uObRAFL"]},
+{ids:["811d0UNeaGL","41lpyHq4nDL","51yuMwf+jGL","71arKFO4IUL","81woIm+c2ZL"]},
+{ids:["71c7a3PYZHL","81Oe9KFr1-L","71nKoW88LbL","81GfF-Wto+L","81cGUlDGNAL"]},
+{ids:["717Hj3VoQ3L","71jkWRrKbEL","71W5WNspOkL","61bX62pws1L","61aBr5Ui20L"]},
+{ids:["81DVVsVFGIL","91vZNMj2TCL"]},
+{ids:["71ucM-UFhyL","81iA-+6mUKL","81bYrHM7iZL","812Ql7D71LL","81ZOhYzhFCL"]},
+{ids:["815XWxBpwLL","814awLHqyJL","81-4OoNeVOL","81ZQioKNVeL","81NhR2fbyvL"]},
+{ids:["81drlvsUT4L","71YxOMgvCbL","81qZpbtsSQL","71dD69Cr0IL","71lTcmrM1XL"]},
+{ids:["81-dSWXl8JL","71avz5eDtVL","71OO3hDt2RL","71rE1T1RXiL"]},
+{ids:["71zadKfrVrL","81JWR6OsqkL","71-xpG8FZML","71ATnvD4fnL","71B19GgkZKL"]},
+{ids:["610RYDBxQJL","61btFyQ3qGL","715+zFotHtL"]},
+{ids:["71BSrFgboiL","41YxDZQLRRL","41x4LqBMhDL","41sI2kqsFBL"]},
+{ids:["71L9SyfJ3BL","71ry3Oj5IuL","61N-PWNTQuL","61ZNCD-aDOL"]},
+{ids:["81vOh6Q34CL","51f0ldHMvpL","51wtAl59tJL","51bi1PZcuSL"]},
+{ids:["61n1EeIvnDL","71JWbHuBI5L","61AwMFvuJ6L","61fOnCmhKeL","91y4oSA7EqL"]},
+{ids:["81wmO87-SeL","816KfY3MYiL","81jYUncpo6L","91w9puGGltL","91wFljAAUdL"]},
+{ids:["81cIYvvn9dL","81kkyNvOeFL","81+wWnertSL","81lq4dvaHLL","81V1f-s-26L"]},
+{ids:["81StAGeoj8L","81gu-u7Gg6L","81R4zpCaAnL","71+b0zk72IL"]},
+{ids:["914zKPJuu8L","81nKlFx8b7L","915iwnX5qlL","81hL1Izhm6L","81jfi8-6-UL"]},
+{ids:["61CTPbrkkAL","51s+Eb3cb3L","61REvB9ERfL","61UwFGhGw5L","614Kz-IjUvL"]},
+{ids:["81KElyscbYL","81h8I9WupDL","81Cw5YjrlML","81EJfjri+oL","81d+S+7TEiL"]},
+{ids:["81KFDeEZN2L","71t1F7M6prL","71tdvzg1xbL","71oKaGbgSUL","71+E5aMsTkL"]},
+{ids:["81ZxR2Fm95L","81eqmyPqV8L","81pTjwtf8WL","81o5qWzQJQL","81YxlJ5nI5L"]},
+{ids:["81TsafjSOTL","61W2o0wjyjL","9195jOgbJvL","81Ksbv--dQL","81eFqmDKClL"]},
+{ids:["81bAASuVwgL","517czOcvcwL","41xll-0YkCL","514CVkBb6mL"]},
+{ids:["815WZWDWwQL","71XhSZRnpyL","71YZC4AF4aL","81dZYakIQ2L"]},
+{ids:["71QUijYhm2L","61En7wQrHrL","71rie++WbcL","71Tx39a8osL","71mws8A2YRL"]},
+{ids:["81nJShD5KaL","71PCfAFvjYL","71VrFyLB9cL","61JwaJKBUjL"]},
+{ids:["81s6x12GxNL","814t+eSYKsL","81UvXqQ4u7L","81ASDyWtOTL"]},
+{ids:["81oJBPCimgL","71DXkJRi0qL","814Jf++oMML","71kOgwWGQjL"]},
+{ids:["71JQkrPhlSL","7104k21S8YL","51RykIuYvKL","61tPlJcsZCL"]},
+{ids:["81PN9V6z2DL","91zpArMG1vL","81X737Ub6FL","91ppe2RE8pL","91Qt0y20ebL"]},
+{ids:["81Sw+Ms3cNL","81VG5MX1AbL","81fsNCuIV7L","81Ves87-wHL","81T9CbE6ULL"]},
+{ids:["71DjKPU4-HL","71rA1iSHMaL","71Nq+kOO2gL","71RIJYL2odL"]},
+{ids:["716EVkoY4tL","719xzor4sgL","81encZBwjwL","813O4Ue27GL","81YAdcfVwLL"]},
+{ids:["71fTdt7HheL","410XRB-3ljL","41b4H4us+7L","51t6FtCzi3L"]},
+{ids:["91VVCwYOQOL","91E-otQzWgL","81G7+qGd94L","81iNerSRiGL","81RpMdZGyrL"]},
+{ids:["81cPgudNoPL","81+Dviw48bL","71Uy8+Up+mL","81UbU88TueL","81O69Epj3-L"]},
+{ids:["81s2lx68XTL","51efOiJ9+UL","51d2gJYhGVL","41rtMmlDKLL"]},
+{ids:["71bIs9HXYOL","8128soNLQcL"]},
+{ids:["81rXWnF98iL","81-bR-nCgiL","81Y6gyJidVL","81OnkrdgdIL","71PCeD94FiL"]},
+{ids:["91gTPP76ELL","51aJTb-G-HL","41rxMa96LqL","41lllgE-LaL"]},
+{ids:["71wiAgGeHIL","81pfbCvuVGL","810AZYbsb8L","711yfQrub8L","71RjBDD0RmL"]},
+{ids:["81x8eW1q1iL","81r0GMEtFTL","81U+hQdFgiL","81a6CTbma9L","81ZAq8JMsDL"]},
+{ids:["81Q4rbt-QRL","81cnp4SEgKL","81HLZ6CseCL","81PB76YnZOL","71-oNEMCIRL"]},
+{ids:["81r82+GwoSL","81o9f1rbT-L","817zi3Y9VoL","81JgmEAm3SL","817yTmCmi6L"]},
+{ids:["819ulf4oONL","91grT6ofxKL","81mef9cIBNL","81b0yw3mmQL","81Dl2xdjAzL"]},
+{ids:["812Bk3M9dwL","51nES41cIgL","41ox3jBRjPL","51eUHctkscL"]},
+{ids:["81Tneiz4aKL","71nCTbVpRdL","71CRF1hJ7CL","71S0rgv2E8L","71oShAM2IDL"]},
+{ids:["816KjWGPbbL","51jACB8S+tL","512wC5NwBHL","51Lu2VGRRdL"]},
+{ids:["81KJWcu8UBL","81ESjS64m-L","81V8otSrirL","81pT0uwM0HL","81xWO4ndkuL"]},
+{ids:["71ksuABXMbL","81wlJMoBtCL","81gvNf2BA0L","8189cjuJTAL","81VfqQty-IL"]},
+{ids:["7174Ve0mHkL","61cQIeg4YAL","61Z7WDTUQcL","61FCM+tckjL","61WQJ7TzkdL"]},
+{ids:["81rfAu4K6xL","71Wsdq6HODL","81sGL+5ah+L","81h-8yx32ZL","81ckdoxdqjL"]},
+{ids:["91hjqSwx5LL","91jBD1eJkbL","81zD2Wp4ceL","81VWnpIVFML"]},
+{ids:["71t0lilnzdL","712nRmwPoIL","71tDZk3k-nL","61WB8PM11rL","71uyK33MwHL"]},
+{ids:["81MMbS2JobL","91720saNIbL","71+KEvYFkaL","71u9XQ2M0yL","71IC-RrPCML"]},
+{ids:["71-24iVN1dL","71dpgV2s1uL","71k4qpCFQhL","61jxfnVvkNL","61+mlWhGxxL"]},
+{ids:["81zdpondEFL","516TAECTJqL","51qCnF4gVBL","51aOGiHL63L"]},
+{ids:["81AE4NzZNEL","81Y6YM498SL","71p1oeJbxfL","815RC8wAsjL","81rqu7vTTsL"]},
+{ids:["71HN5LsyWYL","71BLxz3KtjL","81EK3TGhadL","612ysAJq-8L","71OTTKAIHZL"]},
+{ids:["71AxAfUb+7L","71WjszU-HxL","71RW7ggA8ZL","71ADYRn+UfL","714wlfNs+QL"]},
+{ids:["81hjKr5g5hL","81vKe63xO3L","81GkuHpnSZL","818ORw-zZSL","71BrVMgV0uL"]},
+{ids:["71Jmoc8d7yL","710vRPCXrmL","81L2uM-femL","71s-6eakCKL","712Z2wLTh2L"]},
+{ids:["61uMiIrg+oL","51tBjfpSJRL","51o9WeJVFHL","51YHiwq8gzL","51gzmw+Y6KL"]},
+{ids:["61WbpghKR9L","51ijnKbfZOL","51-HHcgCoVL","51PLBDTMxNL","517vyV74XkL"]},
+{ids:["81Fl4a15QCL","71hv52tbgvL","81u7+B6WUDL","81+HzzCrFzL","81w8ErjasUL"]},
+{ids:["5167sDX8y0L","61hiG9Og46L","616UpFqNM9L","613SIFchnbL"]},
+{ids:["71H-biikfxL","51dI5qhRAJL","41IDkNE95XL","61nIo7mQzJL","61gYrT2jEpL"]},
+{ids:["817Z3ufJW2L","51d9C2HY8lL","51OE7FmTNrL","41awO-QW4ZL"]},
+{ids:["81DvyA-7cNL","61W2o0wjyjL","81kZEIokNpL","81hGGmKZurL","81z8YHYlfOL"]},
+{ids:["61r93zQnH-L","81hF5DMN1oL","81YmSA7MZYL","71jOqaoSzPL","71WIGETi5CL"]},
+{ids:["81O-6MBpR6L","71+zrvQKZGL","717b9RyFrGL","71Qsjt0X+rL","81zugWl3CYL"]},
+{ids:["51WMZ43-OlL","51-DE-MjWML","51z5oJ-5EHL","510KJZsIT1L","51hiiEK8KaL"]},
+{ids:["81f4NOKOTpL","41c0x2m6NKL","419sjgcjjKL","51UL1s8Ps2L"]},
+{ids:["71tT-0BaFaL","812oeQlYItL"]},
+{ids:["81v-bsJ+XxL","51MUwmnIRtL","51KcDEmO+7L","41DEgDsMs4L"]},
+{ids:["81M7yQzGQtL","71rNabumvEL","71J1fKO2z4L","71yS6wQBqhL","817ZlNMfddL"]},
+{ids:["810WaAXAwuL","81r0TeBixOL","91ChEimE2TL","91NLaXK0lzL","91Q694yExfL"]},
+{ids:["81BJrmvFzOL","51LL205x+UL","41zidP+yBjL","41VuwocuAPL"]},
+{ids:["91QKY24o5cL","81Yeez4qhIL","81++3vPZfbL","51Nqj1atRnL","819gPozAmRL"]},
+{ids:["71p13XElStL","71djf0XM9lL","61TG6heAVYS","71BNWdSNBrL","71A+1lK3I3L"]},
+{ids:["81kuoWGQZ+L","91q5nYr8rQL","81olBzIiH-L","81NNmDT4-RL","81gg+HhpTvL"]},
+{ids:["814kWyUU1JL","81gHrAwp73L","813997RTqsL","81lra3lpkKL"]},
+{ids:["71MOk7DCYNL","81nX3CzHPUL","71Jb2CgPh5L","81sbpGHSD0L","71HEhPk0xpL"]},
+{ids:["81tUxfwfpPL","51U4cB18afL","41th3+h62pL","515k9CiMX4L"]},
+{ids:["81AA74sK-1L","61Wca9RLZaL","61tFLn3i0gL","61Mw2rpvAwL","61kdEVZz-qL"]},
+{ids:["71b4Bp2M+YL","71yvypDWJsL","81YChTwihEL","71GGyK7lQLL","71Y-Iw7ytjL"]},
+{ids:["71IJpkvln4S","71PxvE60RaS","71wcco-eOvS","81i3CrRcXsS","71UsCo572mS"]},
+{ids:["71zw9w4OgLL","61hqAIkXZuL","61WQ9Qfc5wL","615MOTCOE1L","519vew2WCJL"]},
+{ids:["71miW4s+qJL","41-dg0DeHmL","41kN-95EF8L","51eKvOYSnKL"]},
+{ids:["61EJiBbM6DL","71jR+cutK5L","71rHuq580oL","81XBMt9a4VL","71G8fufUySL"]},
+{ids:["61w3xdEhtqL","41b689ZvhlL","51qi9R3qyLL","517a0LW4eSL"]},
+{ids:["81gyLZVpGwL","81xKFm8L9AL","81yXT2VOloL","71KBJQButdL","81AJY7YhbDL"]},
+{ids:["81uiVVEWfeL","71XqJMQ1muS","61HE+eNqZmS","71d75n5DrnS","71-zZL7X6GS"]},
+{ids:["71nf+3qO89L","51y1QIcdD2L","51ppZ6GWJZL","51oLlkKkeiL"]},
+{ids:["71sxV1CzFOL","81ktk46VjcL","71fkdB7ur2L","61yuFNTwycL","61PEF6IkHqL"]},
+{ids:["814JkJKwoqL","71vOpCEATXL","71iANhbdSXL","71anA0DDexL","61HbZHaGZpL"]},
+{ids:["71CHwKPoztL","71Y-V0XS6SL","713o+9XAJkL","61HRTvpFo7L","71sAPVaKGSL"]},
+{ids:["71DT3OysrVL","8123vWEL5yL","71AgYHcG92L","71AovbvVLSL","81FBBsV2-VL"]},
+{ids:["81+WgQzIFGL","71uLZIdsVkL","81NLf84UCFL","61-4RmE+hWL","815SyVknupL"]},
+{ids:["71GUJAuWkXL","71zX+OksSDL","71JyGybujAL","71EU5BXT1lL","714PfhMiyjL"]},
+{ids:["61qeD3YUanL","71Kn3wz6LWL","715jswnvzWL","71aU6ArKLOL","61gXJWDkMJL"]},
+{ids:["81QJHMNMOVL","81jZWn0YrPL","71YyQvb6K6L","81Qx2cjsoVL"]},
+{ids:["71iNpBlN0YL","81xZzONV-bL","717rwwenb4L","71+N3k0PxUL","7142iMPuyKL"]},
+{ids:["81Ta4KdY48L","91lJujducOL","91rosn1-V1L","918pnnwO2qL","816hLaBqlSL"]},
+{ids:["81JbnRk430L","715gUDxpEYL","81y9eJuxT4L","81v69ixweEL","81DVcczF7tL"]},
+{ids:["81An4hTZfUL","91JXeT7glWL","91XznIa3TEL","91+Cu8x9WEL","81TONxPCxHL"]},
+{ids:["81wLuRvtMFL","71N0ExKVlpL","91Vo1woNkNL","81AcgmH8+tL","81A5u8ZxkRL"]},
+{ids:["91LGxhVOF8L","91nTTM8JX5L","91djFsAeHQL","91q6+omv-GL","81q9+XEmAVL"]},
+{ids:["81oNtQpqbjL","81AND4DOYoL","81mXRaHHGHL","816TitM1qFL"]},
+{ids:["71xT4N4h8NL","81b+tCssX3L","81Tv675bqQL","81idvBRRl6L","81GwhIPq-qL"]},
+{ids:["81VZtoeclJL","817brtYVWzL","91lTTkVXZpL","816tenbk3JL","81AtPwRzA4L"]},
+{ids:["71nfwTTv5lL","81syz11kgTL","81yISkL+qKL","81xpa6UC6XL","71rVKc4DZCL"]},
+{ids:["91C--G9lylL","71fOxuNrCHL","81DXQVcmQwL","81j5qogHIKL","81YvGdEYguL"]},
+{ids:["81gEBqLweAL","71-mxrx3VDL","71zicDw-TzL","71WJvBE-ObL","71SUvitjIcL"]},
+{ids:["71-DcELDL1L","710NxfPfMqL","71mEAiQc9xL","71CVaSSaH+L","71yBvwiJpwL"]},
+{ids:["81xMax-FklL","51+wFWU8HoL","51BKPYXnoQL","51586oXIKDL"]},
+{ids:["8126UIeJ8VL","81u1TDhsZPL","718B4nl7xxL","71HVdqKWdKL","81Kb78VUncL"]},
+{ids:["81ut-FiiMhL","81U8rHeDHrL","8177YhaFjSL","811ZtZctRRL","81RmR8dmnWL"]},
+{ids:["71mli4BTVvL","91wFUos9pcL","91J9G3ZB2uL","91Qf0Bq9uCL","81c2+XaGxCL"]},
+{ids:["81VbT-PXOwL","71dtPUW+5vL","71GYakSR0FL","71P6em41mdL","71GmbpfYZcL"]},
+{ids:["81+HXPmDh-L","91lnceO-fzL","81-cGKSp1LL","71s2PulfelL","71Bg9RyDEBL"]},
+{ids:["718hLzvIt1L","817-uReX9BL","81jRJSyi8jL","71CT-EmgJfL","71ZUKt0ZCEL"]},
+{ids:["71ZtRoMixsL","61mWh3alhZL","61B9gJSuy9L","61Sn1W7-cvL","61hLiPM6Z-L"]},
+{ids:["71uRENNFM4L","81e11Xm2hAL","713t7XJISJL","71CbexCCmsL"]},
+{ids:["61eTCfpL2NL","41YRLIziXpL","41xU8mFBoTL","41Cnh++iqDL"]},
+{ids:["71Nma-KD6RL","81w8zdRdXvL","61snpEFkWXL","61OWwJSg5+L","61HCnEpSbJL"]},
+{ids:["815bmyn074L","81W2qkaZ9CL","813gTyShP4L","71fwoBpyC2L"]},
+{ids:["71gdseSy2hL","61XJmFxrMPL","71fgLTwJUoL","81jGWOwy7VL"]},
+{ids:["81XTRnmXkKL","81Rs1fYfV2L","81h0acsKcHL","81+66uRmeIL","81EV1mkcJyL"]},
+{ids:["81sn68n6JML","81wf-8ZQh2L","71TV1Hn8a5L","71aAyUa8xOL","71SYtVqREAL"]},
+{ids:["71PJALQwZcL","71+HrcHALML","61oQodWkTwL","7157rmCeBML","61uXpdG26jL"]},
+{ids:["71UJDNav2SL","81RqM5POybL","81cycBLwWUL","71JGb6fHIQL","71aFiCCmCsL"]},
+{ids:["71IAWxhz+3L","71jNsLwliRL","71rspOBSngL","71f6LgFqooL","71DgIWxWDYL"]},
+{ids:["91eHnXHLFSL","91I7jQLxuiL","91auIHBXrgL","81-s1JDVYkL"]},
+{ids:["81FkPwfnghL","41J+l2b5aML","51YZeoZSevL","41mAOcTsWHL"]},
+{ids:["81sru7QHWsL","81qkuCBahlL","81cUC9PyTRL","81kDYK3-SbL","81NKwseLU5L"]},
+{ids:["81P4BpK3xvL","51txaSb3U-L","51fj3ivw+8L","61vzPVFpX3L"]},
+{ids:["81Ut7d5bntL","8171IE-23TL","61r5gIPB-XL","7143z-uqHOL","71AXUekgVcL"]},
+{ids:["61pItPPBbQL","41C3opFOaJL","41hd9aSSDRL","31fEccpg+FL"]},
+{ids:["71gObEwE+ZL","71-TQtQFCHL","71DRWr6m9lL","81AbR3xejKL","71vBKA-wsML"]},
+{ids:["81N-5-wDtSL","71DV2KXV7HL","71SLCTlqKkL","71K7a+gUdtL","71UxTr43mlL"]},
+{ids:["81zpGik096L","51bWFkjB16L","61fXkzPV8SL","61WMBfppIbL","618c3EgPUfL"]},
+{ids:["8111qpCiPXL","81VkEq6lY3L","918FiGDVe+L","81pukdB41ML","81AKHZcGgEL"]},
+{ids:["81LPibmjF-L","81VSgTqWskL","71myRZRPHQL","81tpJxsWWWL"]},
+{ids:["81jSMEQfWXL","81EuXyTzF7L","816EnerDA+L","81Zzwv+qcRL","81iE3gkuf7L"]},
+{ids:["615XXz76uGL","512jcoT11fL","61Dg9+04tdL","51ODU2K8WSL","51OL2dEEDkL"]},
+{ids:["91nJj-v7eeL","71eaAgfoeyL","71rvCy-Km3L","81p0w+3N8SL"]},
+{ids:["91G6l5ZkoBL","91pPrv71L0L","81T7AmUnglL"]},
+{ids:["815gBh1z35L","71c+jbVeEwL","71acd1hKJzL","715OqlppvyL","61gKX+TJ2tL"]}
+];
+const ZOOM = 3;
+const AMZ = "https://m.media-amazon.com/images/I/";
+function amz(id, size){ return AMZ + id.replace(/\+/g,"%2B") + "._AC_SL" + size + "_.jpg"; }
+
+const grid = document.getElementById('grid');
+let ti = 0, ii = 0;
+
+TOYS.forEach((t,i)=>{
+  const card=document.createElement('div');
+  card.className='card'; card.tabIndex=0; card.setAttribute('role','button');
+  card.setAttribute('aria-label','Look closer at this toy');
+  const wrap=document.createElement('div'); wrap.className='imgwrap';
+  const img=new Image();
+  img.src=amz(t.ids[0], 400); img.alt='Toy picture';
+  img.loading = i<16?'eager':'lazy'; img.decoding='async';
+  img.addEventListener('error',()=>wrap.classList.add('broken'));
+  wrap.appendChild(img); card.appendChild(wrap);
+  if(t.ids.length>1){
+    const c=document.createElement('div'); c.className='count'; c.innerHTML='📷 '+t.ids.length;
+    card.appendChild(c);
+  }
+  card.addEventListener('click',()=>openViewer(i));
+  card.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();openViewer(i);} });
+  grid.appendChild(card);
+});
+
+const viewer=document.getElementById('viewer');
+const stage=document.getElementById('stage');
+const stageImg=document.getElementById('stageImg');
+const vLens=document.getElementById('vLens');
+const vPanel=document.getElementById('vPanel');
+const vThumbs=document.getElementById('vThumbs');
+const vDots=document.getElementById('vDots');
+const hint=document.getElementById('hint');
+
+function openViewer(i){ ti=i; ii=0; loadToy();
+  viewer.classList.add('open'); viewer.setAttribute('aria-hidden','false');
+  document.body.style.overflow='hidden';
+}
+function closeViewer(){ viewer.classList.remove('open'); viewer.setAttribute('aria-hidden','true');
+  document.body.style.overflow=''; stopZoom();
+}
+function loadToy(){
+  const toy=TOYS[ti];
+  vThumbs.innerHTML='';
+  toy.ids.forEach((id,k)=>{
+    const b=document.createElement('button');
+    b.className='vthumb'; b.type='button';
+    b.setAttribute('aria-label','Picture '+(k+1));
+    b.setAttribute('aria-current', k===ii);
+    const im=new Image(); im.src=amz(id,140); im.loading='lazy'; b.appendChild(im);
+    b.addEventListener('click',()=>{ ii=k; showImg(); });
+    vThumbs.appendChild(b);
+  });
+  vThumbs.style.display = toy.ids.length>1 ? 'flex':'none';
+  showImg();
+}
+function showImg(){
+  const toy=TOYS[ti];
+  stopZoom();
+  stage.classList.add('loading');
+  stageImg.style.visibility='hidden';
+  stageImg.onload=()=>{ stage.classList.remove('loading'); stageImg.style.visibility='visible'; };
+  stageImg.onerror=()=>{ stage.classList.remove('loading'); stageImg.style.visibility='visible'; };
+  stageImg.src=amz(toy.ids[ii], 1280);
+  [...vThumbs.children].forEach((b,k)=>b.setAttribute('aria-current', k===ii));
+  vDots.innerHTML='';
+  if(toy.ids.length>1) toy.ids.forEach((_,k)=>{
+    const d=document.createElement('i'); if(k===ii) d.className='on'; vDots.appendChild(d);
+  });
+  hint.style.opacity='1';
+}
+function stepToy(d){ ti=(ti+d+TOYS.length)%TOYS.length; ii=0; loadToy(); }
+function stepImg(d){ const n=TOYS[ti].ids.length; ii=(ii+d+n)%n; showImg(); }
+
+document.getElementById('vClose').addEventListener('click',closeViewer);
+document.getElementById('vPrev').addEventListener('click',e=>{e.stopPropagation();stepToy(-1);});
+document.getElementById('vNext').addEventListener('click',e=>{e.stopPropagation();stepToy(1);});
+viewer.addEventListener('click',e=>{ if(e.target===viewer||e.target.classList.contains('vwrap')) closeViewer(); });
+window.addEventListener('keydown',e=>{
+  if(!viewer.classList.contains('open'))return;
+  if(e.key==='Escape')closeViewer();
+  else if(e.key==='ArrowLeft')stepToy(-1);
+  else if(e.key==='ArrowRight')stepToy(1);
+  else if(e.key==='ArrowUp'){e.preventDefault();stepImg(-1);}
+  else if(e.key==='ArrowDown'){e.preventDefault();stepImg(1);}
+});
+
+function zoomAt(cx,cy){
+  const r=stageImg.getBoundingClientRect();
+  let x=cx-r.left, y=cy-r.top;
+  if(x<0||y<0||x>r.width||y>r.height){ stopZoom(); return; }
+  hint.style.opacity='0';
+  const pw=vPanel.offsetWidth, ph=vPanel.offsetHeight;
+  const lw=pw/ZOOM, lh=ph/ZOOM;
+  let lx=Math.max(0,Math.min(x-lw/2,r.width-lw));
+  let ly=Math.max(0,Math.min(y-lh/2,r.height-lh));
+  const sr=stage.getBoundingClientRect();
+  vLens.style.display='block';
+  vLens.style.width=lw+'px'; vLens.style.height=lh+'px';
+  vLens.style.left=(r.left-sr.left+lx)+'px';
+  vLens.style.top=(r.top-sr.top+ly)+'px';
+  vPanel.style.display='block';
+  vPanel.style.backgroundImage=`url("${amz(TOYS[ti].ids[ii], 2000)}")`;
+  vPanel.style.backgroundSize=(r.width*ZOOM)+'px '+(r.height*ZOOM)+'px';
+  vPanel.style.backgroundPosition=`-${lx*ZOOM}px -${ly*ZOOM}px`;
+}
+function stopZoom(){ vLens.style.display='none'; vPanel.style.display='none'; }
+
+let dragging=false;
+stage.addEventListener('pointerdown',e=>{ dragging=true; try{stage.setPointerCapture(e.pointerId);}catch(_){} zoomAt(e.clientX,e.clientY); });
+stage.addEventListener('pointermove',e=>{
+  if(e.pointerType==='mouse' && !dragging){ zoomAt(e.clientX,e.clientY); return; }
+  if(dragging) zoomAt(e.clientX,e.clientY);
+});
+stage.addEventListener('pointerup',e=>{ dragging=false; if(e.pointerType!=='mouse') stopZoom(); });
+stage.addEventListener('pointercancel',()=>{ dragging=false; stopZoom(); });
+stage.addEventListener('mouseleave',()=>{ if(!dragging) stopZoom(); });
+</script>
